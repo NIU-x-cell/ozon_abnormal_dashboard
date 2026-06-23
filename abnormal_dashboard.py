@@ -12,6 +12,8 @@ MYSQL_PWD = st.secrets["MYSQL_PWD"]
 MYSQL_HOST = st.secrets["MYSQL_HOST"]
 MYSQL_PORT = st.secrets["MYSQL_PORT"]
 DB_NAME = st.secrets["MYSQL_DB"]
+# 临时测试，成功会打印账号，报错就是密钥读取失败
+st.write(MYSQL_USER)
 
 engine = create_engine(f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PWD}@{MYSQL_HOST}:{MYSQL_PORT}/{DB_NAME}")
 # ==========================================================
