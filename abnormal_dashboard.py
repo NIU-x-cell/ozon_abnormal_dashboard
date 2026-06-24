@@ -141,10 +141,10 @@ if page_tab == "全局异常总览看板":
     st.plotly_chart(fig_bar, use_container_width=True)
     st.divider()
 
-    # 环形图+负责人TOP10 数据源df_curr_range
+    # 环形图+负责人TOP10 
     col_left, col_right = st.columns(2)
     with col_left:
-        st.subheader("🥧 异常工单类型分布")
+        st.subheader("🍩 异常工单类型分布")
         pie_df = df_curr_range.groupby("链接异常问题").size().reset_index(name="工单数量")
         fig_pie = px.pie(pie_df, names="链接异常问题", values="工单数量", hole=0.4, height=450)
         fig_pie.update_traces(texttemplate="%{value}条\n%{percent:.1%}", textfont_size=11)
@@ -152,8 +152,37 @@ if page_tab == "全局异常总览看板":
         st.plotly_chart(fig_pie, use_container_width=True)
     with col_right:
         st.subheader("🏆 负责人异常工单TOP10")
-        top_user = df_curr_range.groupby("负责人").size().reset_index(name="工单数量").sort_values("工单数量", ascending=False).head(10)
-        fig_rank = px.bar(top_user, x="工单数量", y="负责人", orientation="h", height=450)
+        # 1. 先按工单数量降序排序，保证从上到下数量递减
+        top_user = df_curr_range.groupby("负责人").size().reset_index(name="工单数量")
+        top_user = top_user.sort_values(by="工单数量", ascending=True)  # 升序，绘图后顶部是最大值
+        
+        # 2. 新增颜色区分：前3名橙色高亮，其余灰色
+        def color_label(val):
+            if val >= top_user["工单数量"].nlargest(3).min():
+                return "#ff7800"  # 高亮橙
+            else:
+                return "#6688bb"  # 普通蓝灰
+                
+        top_user["条形颜色"] = top_user["工单数量"].apply(color_label)
+
+        fig_rank = px.bar(
+            top_user,
+            x="工单数量",
+            y="负责人",
+            orientation="h",
+            height=450,
+            text="工单数量",  # 绑定数值展示
+            color="条形颜色",
+            color_discrete_map="identity"  # 使用自定义颜色列
+        )
+        # 3. 条形外侧展示数字，调整字体大小
+        fig_rank.update_traces(
+            texttemplate="%{text}",
+            textposition="outside",
+            textfont_size=10
+        )
+        # 隐藏图例（颜色仅区分，无需图例）
+        fig_rank.update_layout(showlegend=False)
         st.plotly_chart(fig_rank, use_container_width=True)
     st.divider()
 
