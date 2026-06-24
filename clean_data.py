@@ -5,7 +5,6 @@ import streamlit as st
 base_path = os.path.dirname(__file__)
 # ===================== 配置区，修改MySQL账号密码 =====================
 
-
 MYSQL_USER = st.secrets["MYSQL_USER"]
 MYSQL_PWD = st.secrets["MYSQL_PWD"]
 MYSQL_HOST = st.secrets["MYSQL_HOST"]
