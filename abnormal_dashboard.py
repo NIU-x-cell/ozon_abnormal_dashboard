@@ -447,7 +447,7 @@ with col_a:
 需优先复盘其商品定价成本问题。""")
     st.divider()
 # 运营TOP10+明细
-    col_s1, col_s2 = st.columns(2)
+col_s1, col_s2 = st.columns(2)
     with col_s1:
         st.subheader("📊 运营 × 边贡不足根因透视表")
         pivot_operator = pd.pivot_table(
