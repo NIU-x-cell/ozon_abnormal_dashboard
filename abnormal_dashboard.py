@@ -151,7 +151,7 @@ if page_tab == "全局异常总览看板":
         fig_pie.update_layout(legend_font_size=9)
         st.plotly_chart(fig_pie, use_container_width=True)
     with col_right:
-        st.subheader("🏆 筛选区间负责人异常工单TOP10")
+        st.subheader("🏆 负责人异常工单TOP10")
         top_user = df_curr_range.groupby("负责人").size().reset_index(name="工单数量").sort_values("工单数量", ascending=False).head(10)
         fig_rank = px.bar(top_user, x="工单数量", y="负责人", orientation="h", height=450)
         st.plotly_chart(fig_rank, use_container_width=True)
