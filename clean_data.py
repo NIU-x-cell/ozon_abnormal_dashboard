@@ -4,11 +4,7 @@ import os
 import streamlit as st
 base_path = os.path.dirname(__file__)
 # ===================== 配置区，修改MySQL账号密码 =====================
-# MYSQL_USER = "root"
-# MYSQL_PWD = "123456"
-# MYSQL_HOST = "127.0.0.1"
-# MYSQL_PORT = "3306"
-# DB_NAME = "purchase_link_abnormal"
+
 
 MYSQL_USER = st.secrets["MYSQL_USER"]
 MYSQL_PWD = st.secrets["MYSQL_PWD"]
