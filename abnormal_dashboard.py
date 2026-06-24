@@ -364,9 +364,8 @@ if page_tab == "边贡不足专项根因看板":
     # ========= 边贡专项KPI分析 =========
     root_ratio = top_root_curr / total_m_curr
     st.info(f"""【边贡专项KPI结论】
-1. 边贡工单环比{delta_total}，整体风险波动明显；
-2. 链接毛利不足占全部边贡工单{root_ratio:.1%}，是核心根因；
-3. 存量待处理边贡工单{unsolve_m_curr}单，需加快闭环。""")
+1. 边贡工单环比{delta_total}，整体良好；
+2. 链接毛利不足占全部边贡工单{root_ratio:.1%}，是核心根因；""")
     st.divider()
 
     # 每日趋势图
@@ -386,23 +385,30 @@ if page_tab == "边贡不足专项根因看板":
     st.divider()
 
     # 环形图+负责人透视表（数据源df_margin_temp）
-    col_a, col_b = st.columns(2)
-    with col_a:
-        st.subheader("🥧 边贡不足原因分布")
-        root_df = df_margin_curr.groupby("边贡不足无法采购原因").size().reset_index(name="工单数量")
-        fig_root = px.pie(root_df, names="边贡不足无法采购原因", values="工单数量", hole=0.4, height=480)
-        fig_root.update_traces(texttemplate="%{value}条 / %{percent:.1%}", textfont_size=12)
-        fig_root.update_layout(legend_font_size=10)
-        st.plotly_chart(fig_root, use_container_width=True)
-        # ========= 根因环形图分析 =========
-        top_root_item = root_df.iloc[root_df["工单数量"].idxmax()]
-        st.info(f"""【根因分布结论】
+    # 环形图+负责人透视表（数据源df_margin_temp）
+col_a, col_b = st.columns(2)
+with col_a:
+    st.subheader("🥧 边贡不足原因分布")
+    root_df = df_margin_curr.groupby("边贡不足无法采购原因").size().reset_index(name="工单数量")
+    fig_root = px.pie(root_df, names="边贡不足无法采购原因", values="工单数量", hole=0.4, height=480)
+    fig_root.update_traces(texttemplate="%{value}条 / %{percent:.1%}", textfont_size=12)
+    fig_root.update_layout(legend_font_size=10)
+    st.plotly_chart(fig_root, use_container_width=True)
+
+    # ========== 根因环形图分析 ==========
+    top_root_item = root_df.iloc[root_df["工单数量"].idxmax()]
+    # 新增：统计空白无细分根因数量
+    blank_root_count = len(df_margin_curr[df_margin_curr["边贡不足无法采购原因"].isna() | (df_margin_curr["边贡不足无法采购原因"].str.strip() == "")])
+
+    st.info(f"""【根因分布结论】
 最大诱因：{top_root_item['边贡不足无法采购原因']}，工单{top_root_item['工单数量']}条；
-其余涨价、重量超标、活动影响工单占比较低，次要风险。""")
+其余涨价、重量超标、活动影响工单占比较低，属于次要风险。
+无细分根因空白工单共{blank_root_count}条，需要运营补充填写异常原因。""")
     with col_b:
         # ========== 重点修复：删除重复copy临时表代码，直接复用上方df_margin_temp ==========
         # 透视表使用新建的「展示时效」
         st.subheader("📊 负责人 × 边贡不足根因透视表")
+        
         pivot_table = pd.pivot_table(
             df_margin_temp,
             index="负责人",
@@ -437,8 +443,8 @@ if page_tab == "边贡不足专项根因看板":
         # ========= 负责人透视表分析 =========
         top3_leader_sum = pivot_table.head(3)["工单合计"].sum()
         st.info(f"""【负责人透视结论】
-工单前三负责人边贡工单合计{top3_leader_sum}单，承担绝大部分边贡压力；
-浅蓝行代表边贡工单负荷最高3人，需优先复盘其商品定价成本问题。""")
+浅蓝行代表边贡工单数量最高3人，工单前三负责人边贡工单合计{top3_leader_sum}单，
+需优先复盘其商品定价成本问题。""")
     st.divider()
 
     # 运营TOP10+明细
@@ -479,7 +485,7 @@ if page_tab == "边贡不足专项根因看板":
         top1_op = pivot_operator.iloc[0]
         st.info(f"""【运营透视结论】
 负荷最高运营：{top1_op['运营']}，边贡工单{top1_op['工单合计']}单，远超其他运营；
-浅橙三行为高风险运营，其商品链路毛利模型存在批量异常。""")
+浅橙三行为高风险运营（甚至一人超过一个负责人的总量），其商品链路毛利模型存在批量异常。重点关注跟进""")
     with col_s2:
         st.subheader("🏆 高风险运营TOP10")
         # 先升序排序，绘图后最大的行会显示在最上方
