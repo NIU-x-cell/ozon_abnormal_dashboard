@@ -7,11 +7,11 @@ from sqlalchemy import create_engine, true
 
 
 # 从Streamlit后台密钥读取数据库信息
-MYSQL_USER = st.secrets["MYSQL_USER"]
-MYSQL_PWD = st.secrets["MYSQL_PWD"]
-MYSQL_HOST = st.secrets["MYSQL_HOST"]
-MYSQL_PORT = st.secrets["MYSQL_PORT"]
-DB_NAME = st.secrets["MYSQL_DB"]
+MYSQL_USER = "root"
+MYSQL_PWD = "123456"
+MYSQL_HOST = "127.0.0.1"
+MYSQL_PORT = "3306"
+DB_NAME = "purchase_link_abnormal"
 # 临时测试，成功会打印账号，报错就是密钥读取失败
 st.write(MYSQL_USER)
 
