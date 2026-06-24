@@ -165,7 +165,8 @@ if page_tab == "全局异常总览看板":
     st.info(f"""【KPI核心结论】
 1. 当前周期总异常工单{total_curr}单，边贡不足工单占比{margin_ratio:.1%}，是核心异常类型；
 2. 待处理存量{unsolve_curr}单，平均处理时效{avg_curr:.1f}天，处理效率整体良好；
-3. 链接失效工单环比{link_fail_delta}，相比边贡不足问题风险更小。""")
+3. 链接失效工单环比{link_fail_delta}，相比边贡不足问题风险更小。
+4. 独立sku数量为{sku_curr}，说明有大量sku重复出现问题，下一步可以深度分析sku问题，找到对应运营""")
     st.divider()
 
     # 每日趋势柱状图 数据源df_curr_range（筛选区间）
