@@ -7,13 +7,11 @@ from sqlalchemy import create_engine, true
 
 
 # 从Streamlit后台密钥读取数据库信息
-MYSQL_USER = "root"
-MYSQL_PWD = "123456"
-MYSQL_HOST = "127.0.0.1"
-MYSQL_PORT = "3306"
-DB_NAME = "purchase_link_abnormal"
-# 临时测试，成功会打印账号，报错就是密钥读取失败
-st.write(MYSQL_USER)
+MYSQL_USER = "FZXqgY12HpKGyKh.root"
+MYSQL_PWD = "5kFyPsP4D61d5syZ"
+MYSQL_HOST = "gateway01.ap-southeast-1.prod.aws.tidbcloud.com"
+MYSQL_PORT = 4000
+DB_NAME = "link_abnormal_db"
 
 engine = create_engine(f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PWD}@{MYSQL_HOST}:{MYSQL_PORT}/{DB_NAME}")
 # ==========================================================
