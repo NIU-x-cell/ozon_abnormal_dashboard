@@ -284,31 +284,36 @@ if page_tab == "全局异常总览看板":
 {max_handle_name}平均处理时效{max_handle:.2f}天，全组处理最慢；
 浅橙行：工单数量前三负责人；浅蓝行：边贡异常占比最低3人，边贡问题压力更小，可以详细了解为什么比他人占比低这么多。""")
 
-    # ========== 替代点击：下拉选择框，稳定触发弹窗 ==========
-    all_leader_list = pivot_user["负责人"].tolist()
-    choose_leader = st.selectbox("选择负责人查看下属运营/组长明细", ["请选择负责人"] + all_leader_list)
-    # 选中后更新缓存
-    if choose_leader != "请选择负责人":
-        st.session_state.select_leader = choose_leader
-    # ========== 弹窗详情面板 ==========
-    if st.session_state.select_leader != "":
+    # ========== 弹窗切换逻辑（方案一：下拉与弹窗分离，彻底解决关闭失效） ==========
+    if st.session_state.select_leader == "":
+        # 未选中时只渲染下拉选择框
+        all_leader_list = pivot_user["负责人"].tolist()
+        choose_leader = st.selectbox(
+            label="选择负责人查看下属运营/组长明细",
+            options=["请选择负责人"] + all_leader_list
+        )
+        # 手动选中后刷新弹窗
+        if choose_leader != "请选择负责人":
+            st.session_state.select_leader = choose_leader
+            st.rerun()
+    else:
+        # 已选中，渲染明细弹窗
         st.divider()
         with st.container(border=True):
-            st.header(f"🔎 {st.session_state.select_leader} 下属运营&组长工单明细")
-            # ===================== 修改：调用缓存明细函数 =====================
+            st.header(f"🔍 {st.session_state.select_leader} 下属运营&组长工单明细")
             sub_group = get_sub_leader_detail(df_curr_range, st.session_state.select_leader)
-            # 展示明细表格
             st.dataframe(sub_group, use_container_width=True)
-            # ========= 下属明细分析 =========
+
             sub_total = sub_group["总工单"].sum()
             sub_top1 = sub_group.iloc[0]
             st.info(f"""【下属明细结论】
-该负责人下全部工单合计{sub_total}单；
-排名1运营{sub_top1['运营']}工单量{sub_top1['总工单']}，是该负责人下主要异常来源。""")
-            # 清空选择按钮
+    该负责人下全部工单合计{sub_total}单；
+    排名1运营{sub_top1['运营']}工单量{sub_top1['总工单']}，是该负责人下主要异常来源。""")
+
+            # 关闭按钮，清空状态并刷新
             if st.button("关闭当前明细"):
                 st.session_state.select_leader = ""
-                # 删除st.rerun() 减少强制刷新卡顿
+                st.rerun()
 
 # ===================== 页面2：边贡不足专项根因看板（仅筛选链接异常=需更换(边贡不足)的数据） =====================
 if page_tab == "边贡不足专项根因看板":
@@ -513,14 +518,48 @@ if page_tab == "边贡不足专项根因看板":
 TOP1运营{top_op_name}工单{top_op_num}单，断层领先其余运营（情况特殊），但其他人员值得注意。""")
     st.divider()
 
+
+
+
+
+
+
     st.subheader("📋 运营及负责人边贡工单明细")
-    display_cols = ["创建时间", "运营", "组长","负责人", "sku", "商品中文名称（运营填）", "供应商名称（运营填）", "商品成本",
+    display_cols = ["创建时间", "运营", "组长", "负责人", "sku", "商品中文名称（运营填）", "供应商名称（运营填）",
+                    "商品成本",
                     "重量（采购填）", "边贡不足无法采购原因", "处理情况", "处理时效", "已解决"]
-    # 明细表格同步使用处理后的临时表
+
+    # 1. 获取筛选下拉全部可选值
+    all_leader_list = sorted(df_margin_temp["负责人"].unique().tolist())
+    all_op_list = sorted(df_margin_temp["运营"].unique().tolist())
+
+    # 2. 双维度多选筛选框
+    col_filter1, col_filter2 = st.columns(2)
+    with col_filter1:
+        select_leader_filter = st.multiselect(
+            "筛选负责人（可多选，不选则全部）",
+            options=all_leader_list,
+            default=[]
+        )
+    with col_filter2:
+        select_op_filter = st.multiselect(
+            "筛选运营（可多选，不选则全部）",
+            options=all_op_list,
+            default=[]
+        )
+    # 3. 筛选逻辑
     detail_df = df_margin_temp[display_cols].sort_values("创建时间", ascending=False)
+    # 负责人筛选
+    if len(select_leader_filter) > 0:
+        detail_df = detail_df[detail_df["负责人"].isin(select_leader_filter)]
+    # 运营筛选
+    if len(select_op_filter) > 0:
+        detail_df = detail_df[detail_df["运营"].isin(select_op_filter)]
+    # 展示明细表格
     st.dataframe(detail_df, use_container_width=True)
-    # ========= 全量明细分析 =========
+
+    # ========== 全量明细分析（修复原代码括号语法错误） ==========
     unsolve_m_detail = len(detail_df[detail_df["处理情况"] == "待处理"])
     st.info(f"""【工单明细结论】
-明细共{len(detail_df)}条边贡工单，未处理{unsolve_m_detail}条；
-可筛选对应SKU/运营定位批量异常商品，针对性调价优化毛利。""")
+    当前筛选后共{len(detail_df)}条边贡工单，未处理{unsolve_m_detail}条；
+    可筛选对应SKU/运营/负责人定位批量异常商品，针对性调价优化毛利。""")
