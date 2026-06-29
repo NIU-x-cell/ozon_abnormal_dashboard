@@ -530,37 +530,69 @@ TOP1运营{top_op_name}工单{top_op_num}单，断层领先其余运营（情况
                     "商品成本",
                     "重量（采购填）", "边贡不足无法采购原因", "处理情况", "处理时效", "已解决"]
 
-    # 1. 获取筛选下拉全部可选值
-    all_leader_list = sorted(df_margin_temp["负责人"].unique().tolist())
-    all_op_list = sorted(df_margin_temp["运营"].unique().tolist())
+    # ========== 1. 预聚合负责人工单总量（用于排序+显示括号数字） ==========
+    leader_count_df = df_margin_temp.groupby("负责人").size().reset_index(name="工单总数")
+    # 工单从多到少排序
+    leader_count_df = leader_count_df.sort_values("工单总数", ascending=False).reset_index(drop=True)
+    # 生成下拉显示文本：负责人名(工单数量)
+    leader_count_df["下拉显示名"] = leader_count_df.apply(lambda row: f"{row['负责人']}({row['工单总数']})", axis=1)
+    # 映射：显示名 -> 真实负责人名称（筛选用）
+    leader_display_map = dict(zip(leader_count_df["下拉显示名"], leader_count_df["负责人"]))
+    # 下拉选项列表
+    leader_options = leader_count_df["下拉显示名"].tolist()
 
-    # 2. 双维度多选筛选框
+    # ========== 2. 双列多选框：负责人+联动运营 ==========
     col_filter1, col_filter2 = st.columns(2)
     with col_filter1:
-        select_leader_filter = st.multiselect(
-            "筛选负责人（可多选，不选则全部）",
-            options=all_leader_list,
+        select_leader_display = st.multiselect(
+            label="筛选负责人（可多选，不选则全部）",
+            options=leader_options,
             default=[]
         )
+    # 把选中的显示名转回真实负责人名称，用于数据筛选
+    select_leader_real = [leader_display_map[name] for name in select_leader_display]
+
+    # ========== 3. 根据选中负责人，动态过滤对应运营数据 ==========
+    if len(select_leader_real) > 0:
+        # 只保留选中负责人的工单
+        filter_temp = df_margin_temp[df_margin_temp["负责人"].isin(select_leader_real)]
+        # 聚合该批负责人下各运营工单数量
+        op_count_df = filter_temp.groupby("运营").size().reset_index(name="工单总数")
+        op_count_df = op_count_df.sort_values("工单总数", ascending=False).reset_index(drop=True)
+        op_count_df["下拉显示名"] = op_count_df.apply(lambda row: f"{row['运营']}({row['工单总数']})", axis=1)
+        op_display_map = dict(zip(op_count_df["下拉显示名"], op_count_df["运营"]))
+        op_options = op_count_df["下拉显示名"].tolist()
+    else:
+        # 未选任何负责人，运营下拉无选项
+        op_options = []
+        op_display_map = {}
+
     with col_filter2:
-        select_op_filter = st.multiselect(
-            "筛选运营（可多选，不选则全部）",
-            options=all_op_list,
+        select_op_display = st.multiselect(
+            label="筛选运营（仅展示上方选中负责人下属运营）",
+            options=op_options,
             default=[]
         )
-    # 3. 筛选逻辑
+    # 转回真实运营名称
+    select_op_real = [op_display_map[name] for name in select_op_display]
+
+    # ========== 4. 明细筛选逻辑 ==========
     detail_df = df_margin_temp[display_cols].sort_values("创建时间", ascending=False)
     # 负责人筛选
-    if len(select_leader_filter) > 0:
-        detail_df = detail_df[detail_df["负责人"].isin(select_leader_filter)]
-    # 运营筛选
-    if len(select_op_filter) > 0:
-        detail_df = detail_df[detail_df["运营"].isin(select_op_filter)]
+    if len(select_leader_real) > 0:
+        detail_df = detail_df[detail_df["负责人"].isin(select_leader_real)]
+    # 运营联动筛选（仅在已选负责人范围内过滤运营）
+    if len(select_op_real) > 0:
+        detail_df = detail_df[detail_df["运营"].isin(select_op_real)]
+
+    # ====== 新增：SKU去重，相同sku只保留第一条记录 ======
+    detail_df = detail_df.drop_duplicates(subset="sku", keep="first")
+
     # 展示明细表格
     st.dataframe(detail_df, use_container_width=True)
 
-    # ========== 全量明细分析（修复原代码括号语法错误） ==========
+    # ========== 全量明细分析 ==========
     unsolve_m_detail = len(detail_df[detail_df["处理情况"] == "待处理"])
     st.info(f"""【工单明细结论】
-    当前筛选后共{len(detail_df)}条边贡工单，未处理{unsolve_m_detail}条；
+    当前筛选后共{len(detail_df)}条独立SKU工单，未处理{unsolve_m_detail}条；
     可筛选对应SKU/运营/负责人定位批量异常商品，针对性调价优化毛利。""")
